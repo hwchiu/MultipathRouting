@@ -61,12 +61,12 @@ import org.slf4j.LoggerFactory;
 @LogMessageCategory("Flow Programming")
 public class Forwarding extends ForwardingBase implements IFloodlightModule {
     protected static Logger log = LoggerFactory.getLogger(Forwarding.class);
-	protected IMultiPathRoutingService  multipath;
+    protected IMultiPathRoutingService  multipath;
     @Override
     @LogMessageDoc(level="ERROR",
                    message="Unexpected decision made for this packet-in={}",
                    explanation="An unsupported PacketIn decision has been " +
-                   		"passed to the flow programming component",
+                           "passed to the flow programming component",
                    recommendation=LogMessageDoc.REPORT_CONTROLLER_BUG)
     public Command processPacketInMessage(IOFSwitch sw, OFPacketIn pi, IRoutingDecision decision,
                                           FloodlightContext cntx) {
@@ -122,7 +122,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule {
     @LogMessageDoc(level="ERROR",
             message="Failure writing drop flow mod",
             explanation="An I/O error occured while trying to write a " +
-            		"drop flow mod to a switch",
+                    "drop flow mod to a switch",
             recommendation=LogMessageDoc.CHECK_SWITCH)
     protected void doDropFlow(IOFSwitch sw, OFPacketIn pi, IRoutingDecision decision, FloodlightContext cntx) {
         // initialize match structure and populate it using the packet
@@ -246,13 +246,13 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule {
                 int srcVsDest = srcCluster.compareTo(dstCluster);
                 if (srcVsDest == 0) {
                     if (!srcDap.equals(dstDap)) {
-						/*
+                        /*
                         Route route =
                                 routingEngine.getRoute(srcDap.getSwitchDPID(),
                                                        (short)srcDap.getPort(),
                                                        dstDap.getSwitchDPID(),
                                                      (short)dstDap.getPort(), 0); //cookie = 0, i.e., default route
-						*/
+                        */
                         Route route =
                                 multipath.getRoute(srcDap.getSwitchDPID(),
                                                        (short)srcDap.getPort(),
@@ -280,7 +280,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule {
                             if (decision != null) {
                                 wildcard_hints = decision.getWildcards();
                             } else {
-                            	// L2 only wildcard if there is no prior route decision
+                                // L2 only wildcard if there is no prior route decision
                                 wildcard_hints = ((Integer) sw
                                         .getAttribute(IOFSwitch.PROP_FASTWILDCARDS))
                                         .intValue()
@@ -320,10 +320,10 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule {
      */
     @LogMessageDoc(level="ERROR",
                    message="Failure writing PacketOut " +
-                   		"switch={switch} packet-in={packet-in} " +
-                   		"packet-out={packet-out}",
+                           "switch={switch} packet-in={packet-in} " +
+                           "packet-out={packet-out}",
                    explanation="An I/O error occured while writing a packet " +
-                   		"out message to the switch",
+                           "out message to the switch",
                    recommendation=LogMessageDoc.CHECK_SWITCH)
     protected void doFlood(IOFSwitch sw, OFPacketIn pi, FloodlightContext cntx) {
         if (topology.isIncomingBroadcastAllowed(sw.getId(),
@@ -424,7 +424,7 @@ public class Forwarding extends ForwardingBase implements IFloodlightModule {
         this.routingEngine = context.getServiceImpl(IRoutingService.class);
         this.topology = context.getServiceImpl(ITopologyService.class);
         this.counterStore = context.getServiceImpl(ICounterStoreService.class);
-		this.multipath = context.getServiceImpl(IMultiPathRoutingService.class);
+        this.multipath = context.getServiceImpl(IMultiPathRoutingService.class);
     }
 
     @Override
