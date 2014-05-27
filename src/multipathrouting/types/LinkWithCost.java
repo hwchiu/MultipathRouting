@@ -24,7 +24,12 @@ public class LinkWithCost{
 	public long getDstDpid(){
 		return dst;
 	}
-
+	public short getSrcPort(){
+		return srcPort;
+	}
+	public short getDstPort(){
+		return dstPort;
+	}
 	public int getCost(){
 		return cost;
 	}
