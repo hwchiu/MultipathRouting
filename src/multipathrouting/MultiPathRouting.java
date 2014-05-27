@@ -201,6 +201,25 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 		}
 		return false;
 	}
+
+	private void updateLinkCost(long srcDpid,long dstDpid,int cost){
+		Long island = topologyService.getL2DomainId(srcDpid);
+		if( null != dpidLinks.get(island) && null != dpidLinks.get(island).get(srcDpid)){
+			for(LinkWithCost link: dpidLinks.get(island).get(srcDpid)){
+				if(link.getSrcDpid() == srcDpid && link.getDstDpid() == dstDpid){
+					link.setCost(cost);
+					return;
+				}
+			}
+		}
+	}
+
+
+	//Service
+	public void modifyLinkCost(Long srcDpid,Long dstDpid,short cost){
+		updateLinkCost(srcDpid,dstDpid,cost);
+		updateLinkCost(dstDpid,srcDpid,cost);
+	}
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
 		// TODO Auto-generated method stub

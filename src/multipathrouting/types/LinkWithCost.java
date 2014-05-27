@@ -34,6 +34,9 @@ public class LinkWithCost{
 		return cost;
 	}
 
+	public void setCost(int cost){
+		this.cost = cost;
+	}
     public String toString() {
         return "LinkWithCost [src=" + HexString.toHexString(this.src) 
                 + " outPort="
