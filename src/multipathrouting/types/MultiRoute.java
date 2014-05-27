@@ -5,24 +5,29 @@ import java.util.ArrayList;
 import net.floodlightcontroller.routing.Route;
 
 public class MultiRoute {
-	protected short routeCount;
+	protected int routeCount;
+	protected int routeSize;
 	protected ArrayList<Route> routes;
 
 	public MultiRoute(){
 		routeCount = 0;
+		routeSize = 0;
 		routes = new ArrayList<Route>();
 	}
 	
 	public Route getRoute(){
-		return null;
+		routeCount = (routeCount+1)%routeSize;
+		return routes.get(routeCount);
 	}
 
-	public short getRouteCount(){
+	public int getRouteCount(){
 		return routeCount;
 	}
-
+	public int getRouteSize(){
+		return routeSize;	
+	}
 	public void addRoute(Route route){
-		routeCount++;
+		routeSize++;
 		routes.add(route);
 	}
 }

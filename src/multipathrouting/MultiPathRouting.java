@@ -37,7 +37,7 @@ import com.google.common.cache.CacheBuilder;
 import com.google.common.cache.CacheLoader;
 import com.google.common.cache.LoadingCache;
 
-public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
+public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, IMultiPathRoutingService{
 	protected static Logger logger;
 	protected IFloodlightProviderService floodlightProvider;
 	protected ITopologyService topologyService;
@@ -63,7 +63,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 	public void topologyChanged(List<LDUpdate> linkUpdates){
 		//https://github.com/LucaPrete/GreenMST/blob/master/src/it/garr/greenmst/GreenMST.java
 		for (LDUpdate update : linkUpdates){
-			logger.error("Received topology update event {}.", update);
+		//	logger.error("Received topology update event {}.", update);
 			if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_REMOVED) || update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_UPDATED)) {
             	Long island = topologyService.getL2DomainId(update.getSrc());
 				LinkWithCost srcLink = new LinkWithCost(update.getSrc(), update.getSrcPort(), update.getDst(), update.getDstPort(),1);
@@ -84,20 +84,6 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 		} 
 
 	}
-	public void printDpidLinks(){
-		for(Long myisland : dpidLinks.keySet()){
-			logger.error("island = "+myisland);
-			for(Long dpid : dpidLinks.get(myisland).keySet()){
-				logger.error("switch = "+dpid);
-				for(LinkWithCost link: dpidLinks.get(myisland).get(dpid)){
-					logger.error(link.toString());
-				}
-
-			}
-		}
-
-	}
-
 	public void removeDpidLinks(Long island,Long dpid){
 		if ( null == dpidLinks.get(island)){
 			return ;
@@ -205,7 +191,10 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 			}
 
 		}
-		return routes;
+		if ( 0  == routes.getRouteSize())
+			return null;
+		else
+			return routes;
 	}
 	public boolean generateMultiPath(Long srcDpid, Long current, HashMap<Long, HashSet<LinkWithCost>> previous,LinkedList<NodePortTuple> switchPorts){
 		if( current == srcDpid)
@@ -213,10 +202,10 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 		HashSet<LinkWithCost> links = previous.get(current);
 		for(LinkWithCost link: links){
 		 	if( true == generateMultiPath(srcDpid, link.getDstDpid(), previous,switchPorts)){
-            	NodePortTuple npt = new NodePortTuple(link.getSrcDpid(), link.getSrcPort());
-				switchPorts.addFirst(npt);
-     	    	npt = new NodePortTuple(link.getDstDpid(), link.getDstPort());
-				switchPorts.addFirst(npt);
+            	NodePortTuple npt = new NodePortTuple(link.getDstDpid(), link.getDstPort());
+				switchPorts.addLast(npt);
+     	    	npt = new NodePortTuple(link.getSrcDpid(), link.getSrcPort());
+				switchPorts.addLast(npt);
 				links.remove(link);
 				return true;
 			}
@@ -236,23 +225,88 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 		}
 	}
 
+	public MultiRoute getRoute(long srcDpid,long dstDpid){
+        // Return null route if srcDpid equals dstDpid
+        if (srcDpid == dstDpid) return null;
+
+
+        RouteId id = new RouteId(srcDpid, dstDpid);
+        MultiRoute results = null;
+
+        try {
+            results = pathcache.get(id);
+        } catch (Exception e) {
+            logger.error("{}", e);
+        }
+        return results;
+	}
+	//
+	//IMultiPathRoutingService implement
+	//
 
 	//Service
+	@Override
+	public Route getRoute(long srcDpid,short srcPort,long dstDpid,short dstPort){
+
+        // Return null the route source and desitnation are the
+        // same switchports.
+        if (srcDpid == dstDpid && srcPort == dstPort)
+            return null;
+
+        List<NodePortTuple> nptList;
+        NodePortTuple npt;
+        MultiRoute routes = getRoute(srcDpid, dstDpid);
+		Route result;
+		if ( null == routes){
+			logger.error(" no result for {} to {}",srcDpid,dstDpid);
+			result = null;
+		}
+		else{
+			result = routes.getRoute();
+		}
+        if (routes == null && srcDpid != dstDpid) return null;
+
+
+        if (result != null) {
+            nptList= new ArrayList<NodePortTuple>(result.getPath());
+        } else {
+            nptList = new ArrayList<NodePortTuple>();
+        }
+
+        npt = new NodePortTuple(srcDpid, srcPort);
+        nptList.add(0, npt); // add src port to the front
+        npt = new NodePortTuple(dstDpid, dstPort);
+        nptList.add(npt); // add dst port to the end
+
+        RouteId id = new RouteId(srcDpid, dstDpid);
+        result = new Route(id, nptList);
+		logger.error("route = {}",result.toString());
+        return result;
+		
+	}
+	@Override
 	public void modifyLinkCost(Long srcDpid,Long dstDpid,short cost){
 		updateLinkCost(srcDpid,dstDpid,cost);
 		updateLinkCost(dstDpid,srcDpid,cost);
 	}
 
+
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
-		// TODO Auto-generated method stub
-		return null;
+        Collection<Class<? extends IFloodlightService>> l =
+                new ArrayList<Class<? extends IFloodlightService>>();
+        l.add(IMultiPathRoutingService.class);
+		return l;
 	}
 
 	@Override
 	public Map<Class<? extends IFloodlightService>, IFloodlightService> getServiceImpls() {
-		// TODO Auto-generated method stub
-		return null;
+        Map<Class<? extends IFloodlightService>,
+        IFloodlightService> m =
+            new HashMap<Class<? extends IFloodlightService>,
+                IFloodlightService>();
+        m.put(IMultiPathRoutingService.class, this);
+        return m;
 	}
 
 	@Override
