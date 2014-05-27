@@ -21,5 +21,8 @@ public class MultiRoute {
 		return routeCount;
 	}
 
-
+	public void addRoute(Route route){
+		routeCount++;
+		routes.add(route);
+	}
 }

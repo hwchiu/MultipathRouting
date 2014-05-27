@@ -33,6 +33,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 
 public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 	protected static Logger logger;
@@ -41,6 +44,20 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 	protected final int ROUTE_LIMITATION = 20;
 	//Double map, HashMap< ClusterDpid, HashMap<switchDpid, Set<Links>>>
 	protected HashMap<Long, HashMap<Long, HashSet<LinkWithCost>>> dpidLinks;
+    
+	protected class PathCacheLoader extends CacheLoader<RouteId, MultiRoute> {
+        MultiPathRouting mpr;
+        PathCacheLoader(MultiPathRouting mpr) {
+            this.mpr = mpr;
+        }
+
+        @Override
+        public MultiRoute load(RouteId rid) {
+            return mpr.buildMultiRoute(rid);
+        }
+	}
+    private final PathCacheLoader pathCacheLoader = new PathCacheLoader(this);
+    protected LoadingCache<RouteId, MultiRoute> pathcache;
 
 	@Override
 	public void topologyChanged(List<LDUpdate> linkUpdates){
@@ -52,7 +69,6 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 				LinkWithCost srcLink = new LinkWithCost(update.getSrc(), update.getSrcPort(), update.getDst(), update.getDstPort(),1);
 				LinkWithCost dstLink = srcLink.getInverse();
 				if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_REMOVED)){
-					computeMultiPath(1,7);
 					removeLink(island,srcLink);
 					removeLink(island,dstLink);
 				}
@@ -124,12 +140,16 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 			dpidLinks.get(island).get(dpid).add(link);
 		}
 	}
+	public MultiRoute buildMultiRoute(RouteId rid){
+		return computeMultiPath(rid.getSrc(),rid.getDst());
+	}
 
-	public void computeMultiPath(long srcDpid,long dstDpid){
+	public MultiRoute computeMultiPath(long srcDpid,long dstDpid){
 		Long island = topologyService.getL2DomainId(srcDpid);
-		if( null == dpidLinks.get(island) ){
-			return ;
-		}
+		if( null == dpidLinks.get(island) || island != topologyService.getL2DomainId(dstDpid) || srcDpid == dstDpid)
+			return null;
+		if( null == dpidLinks.get(island).get(srcDpid) || null == dpidLinks.get(island).get(dstDpid))
+			return null;
 		HashMap<Long, HashSet<LinkWithCost>> previous = new HashMap<Long, HashSet<LinkWithCost>>();
 		HashMap<Long, HashSet<LinkWithCost>> links = dpidLinks.get(island);
 		HashMap<Long, Integer> costs = new HashMap<Long, Integer>();
@@ -172,6 +192,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 			}
 
 		}
+		MultiRoute routes = new MultiRoute();
 		for(int i=0;i<ROUTE_LIMITATION;i++){
 			if(previous.get(dstDpid).size() <=0)
 				break;
@@ -180,10 +201,11 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 				break;
 			else{
 				Route result = new Route(new RouteId(srcDpid,dstDpid), switchPorts);
-				logger.error("Route = {}",result.toString());
+				routes.addRoute(result);
 			}
 
 		}
+		return routes;
 	}
 	public boolean generateMultiPath(Long srcDpid, Long current, HashMap<Long, HashSet<LinkWithCost>> previous,LinkedList<NodePortTuple> switchPorts){
 		if( current == srcDpid)
@@ -220,6 +242,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 		updateLinkCost(srcDpid,dstDpid,cost);
 		updateLinkCost(dstDpid,srcDpid,cost);
 	}
+
 	@Override
 	public Collection<Class<? extends IFloodlightService>> getModuleServices() {
 		// TODO Auto-generated method stub
@@ -248,6 +271,14 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener{
 		topologyService    = context.getServiceImpl(ITopologyService.class);
 		logger = LoggerFactory.getLogger(MultiPathRouting.class);
 		dpidLinks = new HashMap<Long, HashMap<Long, HashSet<LinkWithCost>>>();
+        pathcache = CacheBuilder.newBuilder().concurrencyLevel(4)
+                    .maximumSize(1000L)
+                    .build(
+                            new CacheLoader<RouteId, MultiRoute>() {
+                                public MultiRoute load(RouteId rid) {
+                                    return pathCacheLoader.load(rid);
+                                }
+                            });
 	}
 
 	@Override
