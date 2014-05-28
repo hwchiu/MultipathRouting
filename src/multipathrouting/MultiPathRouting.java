@@ -48,19 +48,37 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     
 
 
-    protected class PathCacheLoader extends CacheLoader<FlowId,Route> {
+    protected class FlowCacheLoader extends CacheLoader<FlowId,Route> {
+        MultiPathRouting mpr;
+        FlowCacheLoader(MultiPathRouting mpr) {
+            this.mpr = mpr;
+        }
+
+        @Override
+        public Route load(FlowId fid) {
+            return mpr.buildFlowRoute(fid);
+        }
+    }
+    private final FlowCacheLoader flowCacheLoader = new FlowCacheLoader(this);
+    protected LoadingCache<FlowId,Route> flowcache;
+    
+    protected class PathCacheLoader extends CacheLoader<RouteId,MultiRoute> {
         MultiPathRouting mpr;
         PathCacheLoader(MultiPathRouting mpr) {
             this.mpr = mpr;
         }
 
         @Override
-        public Route load(FlowId rid) {
+        public MultiRoute load(RouteId rid) {
             return mpr.buildMultiRoute(rid);
         }
     }
     private final PathCacheLoader pathCacheLoader = new PathCacheLoader(this);
-    protected LoadingCache<FlowId,Route> pathcache;
+    protected LoadingCache<RouteId,MultiRoute> pathcache;
+    
+    
+
+
 
     //
     //
@@ -69,9 +87,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     //
     @Override
     public void topologyChanged(List<LDUpdate> linkUpdates){
-        //https://github.com/LucaPrete/GreenMST/blob/master/src/it/garr/greenmst/GreenMST.java
         for (LDUpdate update : linkUpdates){
-        //    logger.error("Received topology update event {}.", update);
             if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_REMOVED) || update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_UPDATED)) {
                 Long island = topologyService.getL2DomainId(update.getSrc());
                 LinkWithCost srcLink = new LinkWithCost(update.getSrc(), update.getSrcPort(), update.getDst(), update.getDstPort(),1);
@@ -84,7 +100,6 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
                 else if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_UPDATED)){
                     addLink(island,srcLink);
                     addLink(island,dstLink);
-                    clearRoutingCache();
                 }
             }
             else if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.SWITCH_UPDATED) || update.getOperation().equals(ILinkDiscovery.UpdateOperation.SWITCH_REMOVED)){
@@ -96,6 +111,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
 
     }
     public void clearRoutingCache(){
+         flowcache.invalidateAll();
          pathcache.invalidateAll();
     }
     public void removeDpidLinks(Long island,Long dpid){
@@ -140,20 +156,30 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
             dpidLinks.get(island).get(dpid).add(link);
         }
     }
-    public Route buildMultiRoute(FlowId rid){
-        Long srcDpid = rid.getSrc();
-        Long dstDpid = rid.getDst();
-        short srcPort = rid.getSrcPort();
-        short dstPort = rid.getDstPort();
 
-        Route result = computeMultiPath(rid);
+    public Route buildFlowRoute(FlowId fid){
+        Long srcDpid = fid.getSrc();
+        Long dstDpid = fid.getDst();
+        short srcPort = fid.getSrcPort();
+        short dstPort = fid.getDstPort();
+
         List<NodePortTuple> nptList;
         NodePortTuple npt;
-
+        MultiRoute routes = null;
+        Route result = null;
+        try{
+            routes = pathcache.get(new RouteId(srcDpid,dstDpid));
+        }catch (Exception e){
+            logger.error("error {}",e.toString());
+        }
+        if( 0 == routes.getRouteSize())
+            result = null;
+        else
+            result = routes.getRoute();
+        
         if (result != null) {
             nptList= new ArrayList<NodePortTuple>(result.getPath());
         } else {
-            logger.error("srcport = {},dstPort={}",srcPort,dstPort);
             nptList = new ArrayList<NodePortTuple>();
         }
 
@@ -166,17 +192,19 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         return result;
     }
 
-    public Route computeMultiPath(FlowId rid){
+    public MultiRoute buildMultiRoute(RouteId rid){
+        return computeMultiPath(rid);
+    }
+
+    public MultiRoute computeMultiPath(RouteId rid){
         Long srcDpid = rid.getSrc();
         Long dstDpid = rid.getDst();
-        short srcPort = rid.getSrcPort();
-        short dstPort = rid.getDstPort();
-
+        MultiRoute routes = new MultiRoute();
         Long island = topologyService.getL2DomainId(srcDpid);
         if( null == dpidLinks.get(island) || island != topologyService.getL2DomainId(dstDpid) || srcDpid == dstDpid)
-            return null;
+            return routes;
         if( null == dpidLinks.get(island).get(srcDpid) || null == dpidLinks.get(island).get(dstDpid))
-            return null;
+            return routes;
         HashMap<Long, HashSet<LinkWithCost>> previous = new HashMap<Long, HashSet<LinkWithCost>>();
         HashMap<Long, HashSet<LinkWithCost>> links = dpidLinks.get(island);
         HashMap<Long, Integer> costs = new HashMap<Long, Integer>();
@@ -219,7 +247,6 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
             }
 
         }
-        MultiRoute routes = new MultiRoute();
         for(int i=0;i<ROUTE_LIMITATION;i++){
             if(previous.get(dstDpid).size() <=0)
                 break;
@@ -232,10 +259,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
             }
 
         }
-        if ( 0  == routes.getRouteSize())
-            return null;
-        else
-            return routes.getRoute();
+        return routes;
     }
     public boolean generateMultiPath(Long srcDpid, Long current, HashMap<Long, HashSet<LinkWithCost>> previous,LinkedList<NodePortTuple> switchPorts){
         if( current == srcDpid)
@@ -272,7 +296,6 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     //
     @Override
     public Route getRoute(long srcDpid,short srcPort,long dstDpid,short dstPort){
-        logger.error("srcPort ={},dstPort={}",srcPort,dstPort);
         // Return null the route source and desitnation are the
         // same switchports.
         if (srcDpid == dstDpid && srcPort == dstPort)
@@ -281,14 +304,12 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         FlowId id = new FlowId(srcDpid,srcPort,dstDpid,dstPort);
         Route result = null;
         try{
-            result = pathcache.get(id);
+            result = flowcache.get(id);
         }catch (Exception e){
             logger.error("error {}",e.toString());
         }
         
         if (result == null && srcDpid != dstDpid) return null;
-        if (result != null)
-            logger.error("route ={}",result.toString());
         return result;
         
     }
@@ -343,11 +364,19 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         logger = LoggerFactory.getLogger(MultiPathRouting.class);
         dpidLinks = new HashMap<Long ,HashMap<Long, HashSet<LinkWithCost>>>();
 
-        pathcache = CacheBuilder.newBuilder().concurrencyLevel(4)
+        flowcache = CacheBuilder.newBuilder().concurrencyLevel(4)
                     .maximumSize(1000L)
                     .build(
                             new CacheLoader<FlowId,Route>() {
-                                public Route load(FlowId rid) {
+                                public Route load(FlowId fid) {
+                                    return flowCacheLoader.load(fid);
+                                }
+                            });
+        pathcache = CacheBuilder.newBuilder().concurrencyLevel(4)
+                    .maximumSize(1000L)
+                    .build(
+                            new CacheLoader<RouteId,MultiRoute>() {
+                                public MultiRoute load(RouteId rid) {
                                     return pathCacheLoader.load(rid);
                                 }
                             });

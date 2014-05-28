@@ -76,7 +76,7 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
                 return false;
         } else if (!src.equals(other.src))
             return false;
-        if (srcPort != other.dstPort)
+        if (srcPort != other.srcPort)
             return false;
         if (dstPort != other.dstPort)
             return false;
