@@ -100,7 +100,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
                     addLink(dstLink);
                 }
             }
-			
+            
         } 
 
     }
@@ -115,8 +115,8 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         }
         else{
             dpidLinks.get(dpid).remove(link);
-			if( 0 == dpidLinks.get(dpid).size())
-				dpidLinks.remove(dpid);
+            if( 0 == dpidLinks.get(dpid).size())
+                dpidLinks.remove(dpid);
         }
 
     }
