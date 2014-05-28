@@ -43,8 +43,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     protected ITopologyService topologyService;
     protected IRestApiService restApi;
     protected final int ROUTE_LIMITATION = 20;
-    //Double map, HashMap< ClusterDpid, HashMap<switchDpid, Set<Links>>>
-    protected HashMap<Long, HashMap<Long, HashSet<LinkWithCost>>> dpidLinks;
+    protected HashMap<Long, HashSet<LinkWithCost>> dpidLinks;
     
 
 
@@ -89,24 +88,19 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     public void topologyChanged(List<LDUpdate> linkUpdates){
         for (LDUpdate update : linkUpdates){
             if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_REMOVED) || update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_UPDATED)) {
-                Long island = topologyService.getL2DomainId(update.getSrc());
                 LinkWithCost srcLink = new LinkWithCost(update.getSrc(), update.getSrcPort(), update.getDst(), update.getDstPort(),1);
                 LinkWithCost dstLink = srcLink.getInverse();
                 if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_REMOVED)){
-                    removeLink(island,srcLink);
-                    removeLink(island,dstLink);
+                    removeLink(srcLink);
+                    removeLink(dstLink);
                     clearRoutingCache();
                 }
                 else if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_UPDATED)){
-                    addLink(island,srcLink);
-                    addLink(island,dstLink);
+                    addLink(srcLink);
+                    addLink(dstLink);
                 }
             }
-            else if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.SWITCH_UPDATED) || update.getOperation().equals(ILinkDiscovery.UpdateOperation.SWITCH_REMOVED)){
-                Long island = topologyService.getL2DomainId(update.getSrc());
-                removeDpidLinks(island,update.getSrc());
-                clearRoutingCache();
-            }
+			
         } 
 
     }
@@ -114,46 +108,27 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
          flowcache.invalidateAll();
          pathcache.invalidateAll();
     }
-    public void removeDpidLinks(Long island,Long dpid){
-        if ( null == dpidLinks.get(island)){
-            return ;
-        }
-        else if ( null == dpidLinks.get(island).get(dpid)){
-            return ;
-        }
-        else{
-            dpidLinks.get(island).get(dpid).clear();
-        }
-    }
-    public void removeLink(Long island,LinkWithCost link){
+    public void removeLink(LinkWithCost link){
         Long dpid = link.getSrcDpid();
-        if( null == dpidLinks.get(island)){
-            return;
-        }
-        else if (null == dpidLinks.get(island).get(dpid)){
+        if( null == dpidLinks.get(dpid)){
             return;
         }
         else{
-            dpidLinks.get(island).get(dpid).remove(link);
+            dpidLinks.get(dpid).remove(link);
+			if( 0 == dpidLinks.get(dpid).size())
+				dpidLinks.remove(dpid);
         }
 
     }
-    public void addLink(Long island,LinkWithCost link){    
+    public void addLink(LinkWithCost link){    
         Long dpid = link.getSrcDpid();
-        if( null == dpidLinks.get(island)){
-            HashMap<Long, HashSet<LinkWithCost>> dpidWithLinks = new HashMap<Long, HashSet<LinkWithCost>>();
+        if (null == dpidLinks.get(dpid)){
             HashSet<LinkWithCost> links = new HashSet<LinkWithCost>();
             links.add(link);
-            dpidWithLinks.put(dpid,links);
-            dpidLinks.put(island,dpidWithLinks);
-        }
-        else if (null == dpidLinks.get(island).get(dpid)){
-            HashSet<LinkWithCost> links = new HashSet<LinkWithCost>();
-            links.add(link);
-            dpidLinks.get(island).put(dpid,links);
+            dpidLinks.put(dpid,links);
         }
         else{
-            dpidLinks.get(island).get(dpid).add(link);
+            dpidLinks.get(dpid).add(link);
         }
     }
 
@@ -200,19 +175,17 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         Long srcDpid = rid.getSrc();
         Long dstDpid = rid.getDst();
         MultiRoute routes = new MultiRoute();
-        Long island = topologyService.getL2DomainId(srcDpid);
-        if( null == dpidLinks.get(island) || island != topologyService.getL2DomainId(dstDpid) || srcDpid == dstDpid)
+        if( srcDpid == dstDpid)
             return routes;
-        if( null == dpidLinks.get(island).get(srcDpid) || null == dpidLinks.get(island).get(dstDpid))
+        if( null == dpidLinks.get(srcDpid) || null == dpidLinks.get(dstDpid))
             return routes;
         HashMap<Long, HashSet<LinkWithCost>> previous = new HashMap<Long, HashSet<LinkWithCost>>();
-        HashMap<Long, HashSet<LinkWithCost>> links = dpidLinks.get(island);
+        HashMap<Long, HashSet<LinkWithCost>> links = dpidLinks;
         HashMap<Long, Integer> costs = new HashMap<Long, Integer>();
         for(Long dpid : links.keySet()){
             costs.put(dpid,Integer.MAX_VALUE);
             previous.put(dpid,new HashSet<LinkWithCost>());
         }
-
         PriorityQueue<NodeCost> nodeq = new PriorityQueue<NodeCost>();
         HashSet<Long> seen = new HashSet<Long>();
         nodeq.add(new NodeCost(srcDpid,0));
@@ -279,9 +252,8 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     }
 
     private void updateLinkCost(long srcDpid,long dstDpid,int cost){
-        Long island = topologyService.getL2DomainId(srcDpid);
-        if( null != dpidLinks.get(island) && null != dpidLinks.get(island).get(srcDpid)){
-            for(LinkWithCost link: dpidLinks.get(island).get(srcDpid)){
+        if( null != dpidLinks.get(srcDpid)){
+            for(LinkWithCost link: dpidLinks.get(srcDpid)){
                 if(link.getSrcDpid() == srcDpid && link.getDstDpid() == dstDpid){
                     link.setCost(cost);
                     return;
@@ -351,7 +323,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         new ArrayList<Class<? extends IFloodlightService>>();
         l.add(IFloodlightProviderService.class);
         l.add(ITopologyService.class);
-        l.add(IRestApiService.class);
+//      l.add(IRestApiService.class);
         return l;
     }
 
@@ -362,7 +334,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         topologyService    = context.getServiceImpl(ITopologyService.class);
         restApi = context.getServiceImpl(IRestApiService.class);
         logger = LoggerFactory.getLogger(MultiPathRouting.class);
-        dpidLinks = new HashMap<Long ,HashMap<Long, HashSet<LinkWithCost>>>();
+        dpidLinks = new HashMap<Long, HashSet<LinkWithCost>>();
 
         flowcache = CacheBuilder.newBuilder().concurrencyLevel(4)
                     .maximumSize(1000L)
@@ -385,7 +357,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     @Override
     public void startUp(FloodlightModuleContext context) {
         topologyService.addListener(this);
-        restApi.addRestletRoutable(new MultiPathRoutingWebRoutable());
+        //restApi.addRestletRoutable(new MultiPathRoutingWebRoutable());
     }
 
 }
