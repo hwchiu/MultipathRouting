@@ -34,10 +34,10 @@ You can caa this function to get one of the shortest path and it depends on the 
 
 Testing
 ======
-	This module has been tested with Mininet, you can find the testing topology on the script directory.
+This module has been tested with Mininet, you can find the testing topology on the script directory.
 
 Todo
 ====
-    - Adding Restful API
-    - Write Testing Code
+- Adding Restful API
+- Write Testing Code
     
