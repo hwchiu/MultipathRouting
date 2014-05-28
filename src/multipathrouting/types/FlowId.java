@@ -5,16 +5,16 @@ import org.openflow.util.HexString;
 public class FlowId implements Cloneable, Comparable<FlowId> {
     protected Long src;
     protected Long dst;
-	protected short srcPort;
-	protected short dstPort;
+    protected short srcPort;
+    protected short dstPort;
 
     public FlowId(Long src, short srcPort,Long dst,short dstPort) {
 
         super();
         this.src = src;
         this.dst = dst;
-		this.srcPort = srcPort;
-		this.dstPort = dstPort;
+        this.srcPort = srcPort;
+        this.dstPort = dstPort;
     }
 
     public Long getSrc() {
@@ -33,18 +33,18 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
         this.dst = dst;
     }
 
-	public short getSrcPort(){
-		return srcPort;
-	}
-	public void setSrcPort(short port){
-		this.srcPort = port;
-	}
-	public short getDstPort(){
-		return srcPort;
-	}
-	public void setDstPort(short port){
-		this.srcPort = port;
-	}
+    public short getSrcPort(){
+        return srcPort;
+    }
+    public void setSrcPort(short port){
+        this.srcPort = port;
+    }
+    public short getDstPort(){
+        return dstPort;
+    }
+    public void setDstPort(short port){
+        this.dstPort = port;
+    }
 
     @Override
     public int hashCode() {
@@ -52,8 +52,8 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
         Long result = new Long(1);
         result = prime * result + ((dst == null) ? 0 : dst.hashCode());
         result = prime * result + ((src == null) ? 0 : src.hashCode());
-		result = prime * result + srcPort;
-		result = prime * result + dstPort;
+        result = prime * result + srcPort;
+        result = prime * result + dstPort;
         return result.hashCode(); 
     }
 
@@ -76,10 +76,10 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
                 return false;
         } else if (!src.equals(other.src))
             return false;
-		if (srcPort != other.dstPort)
-			return false;
-		if (dstPort != other.dstPort)
-			return false;
+        if (srcPort != other.dstPort)
+            return false;
+        if (dstPort != other.dstPort)
+            return false;
         return true;
     }
 
@@ -99,11 +99,11 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
         int result = src.compareTo(o.getSrc());
         if (result != 0)
             return result;
-		result = dst.compareTo(o.getDst());
-		if (result != 0)
-			return result;
-		if ( srcPort == o.getSrcPort())
-			return dstPort - o.getDstPort();
-		return srcPort - o.getSrcPort();
+        result = dst.compareTo(o.getDst());
+        if (result != 0)
+            return result;
+        if ( srcPort == o.getSrcPort())
+            return dstPort - o.getDstPort();
+        return srcPort - o.getSrcPort();
     }
 }
