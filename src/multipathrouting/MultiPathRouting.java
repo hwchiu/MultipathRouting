@@ -42,9 +42,9 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     protected IFloodlightProviderService floodlightProvider;
     protected ITopologyService topologyService;
     protected IRestApiService restApi;
-    protected final int ROUTE_LIMITATION = 20;
+    protected final int ROUTE_LIMITATION = 10;
     protected HashMap<Long, HashSet<LinkWithCost>> dpidLinks;
-    
+    protected int pathCount = 0;    
 
 
     protected class FlowCacheLoader extends CacheLoader<FlowId,Route> {
@@ -76,9 +76,6 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     protected LoadingCache<RouteId,MultiRoute> pathcache;
     
     
-
-
-
     //
     //
     //ITopologyListener
@@ -131,7 +128,6 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
             dpidLinks.get(dpid).add(link);
         }
     }
-
     public Route buildFlowRoute(FlowId fid){
         Long srcDpid = fid.getSrc();
         Long dstDpid = fid.getDst();
@@ -220,35 +216,32 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
             }
 
         }
-        for(int i=0;i<ROUTE_LIMITATION;i++){
-            if(previous.get(dstDpid).size() <=0)
-                break;
-            LinkedList<NodePortTuple> switchPorts = new LinkedList<NodePortTuple>();
-            if( false == generateMultiPath(srcDpid,dstDpid,previous,switchPorts))
-                break;
-            else{
-                Route result = new Route(new RouteId(srcDpid,dstDpid), switchPorts);
-                routes.addRoute(result);
-            }
-
-        }
+        LinkedList<NodePortTuple> switchPorts = new LinkedList<NodePortTuple>();
+        pathCount = 0;
+        generateMultiPath(routes,srcDpid,dstDpid,dstDpid,previous,switchPorts);
         return routes;
     }
-    public boolean generateMultiPath(Long srcDpid, Long current, HashMap<Long, HashSet<LinkWithCost>> previous,LinkedList<NodePortTuple> switchPorts){
-        if( current == srcDpid)
-            return true;
+    public void generateMultiPath(MultiRoute routes, Long srcDpid, Long dstDpid, Long current, HashMap<Long, HashSet<LinkWithCost>> previous,LinkedList<NodePortTuple> switchPorts)
+    {    if (pathCount >=ROUTE_LIMITATION)
+            return ; 
+        if( current == srcDpid){
+            pathCount++;
+            Route result = new Route(new RouteId(srcDpid,dstDpid), new LinkedList<NodePortTuple>(switchPorts));
+            routes.addRoute(result);
+            return ;
+        }
         HashSet<LinkWithCost> links = previous.get(current);
         for(LinkWithCost link: links){
-             if( true == generateMultiPath(srcDpid, link.getDstDpid(), previous,switchPorts)){
-                NodePortTuple npt = new NodePortTuple(link.getDstDpid(), link.getDstPort());
-                switchPorts.addLast(npt);
-                 npt = new NodePortTuple(link.getSrcDpid(), link.getSrcPort());
-                switchPorts.addLast(npt);
-                links.remove(link);
-                return true;
-            }
+            NodePortTuple npt = new NodePortTuple(link.getDstDpid(), link.getDstPort());
+            NodePortTuple npt2 = new NodePortTuple(link.getSrcDpid(), link.getSrcPort());
+            switchPorts.addFirst(npt2);
+            switchPorts.addFirst(npt);
+            generateMultiPath(routes,srcDpid, dstDpid, link.getDstDpid(), previous,switchPorts);
+            switchPorts.removeFirst();
+            switchPorts.removeFirst();
+
         }
-        return false;
+        return ;
     }
 
     private void updateLinkCost(long srcDpid,long dstDpid,int cost){
