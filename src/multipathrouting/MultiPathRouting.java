@@ -200,29 +200,28 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
 
                 if( totalCost < costs.get(dst) ){
                     costs.put(dst,totalCost);
-
                     previous.get(dst).clear();
                     previous.get(dst).add(link.getInverse());
+
+                    NodeCost ndTemp = new NodeCost(dst,totalCost);
+                    nodeq.remove(ndTemp);
+                    nodeq.add(ndTemp);
                 }
                 else if( totalCost == costs.get(dst) ){
                     //multiple path
                     previous.get(dst).add(link.getInverse());
                 }
-
-                NodeCost ndTemp = new NodeCost(dst,totalCost);
-                nodeq.remove(ndTemp);
-                nodeq.add(ndTemp);
-
             }
 
         }
         LinkedList<NodePortTuple> switchPorts = new LinkedList<NodePortTuple>();
         pathCount = 0;
         generateMultiPath(routes,srcDpid,dstDpid,dstDpid,previous,switchPorts);
+        logger.error("Route size = {}",routes.getRouteSize());
         return routes;
     }
     public void generateMultiPath(MultiRoute routes, Long srcDpid, Long dstDpid, Long current, HashMap<Long, HashSet<LinkWithCost>> previous,LinkedList<NodePortTuple> switchPorts)
-    {    if (pathCount >=ROUTE_LIMITATION)
+    {   if (pathCount >=ROUTE_LIMITATION)
             return ; 
         if( current == srcDpid){
             pathCount++;
