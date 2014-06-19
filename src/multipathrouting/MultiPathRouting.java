@@ -217,7 +217,6 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         LinkedList<NodePortTuple> switchPorts = new LinkedList<NodePortTuple>();
         pathCount = 0;
         generateMultiPath(routes,srcDpid,dstDpid,dstDpid,previous,switchPorts);
-        logger.error("Route size = {}",routes.getRouteSize());
         return routes;
     }
     public void generateMultiPath(MultiRoute routes, Long srcDpid, Long dstDpid, Long current, HashMap<Long, HashSet<LinkWithCost>> previous,LinkedList<NodePortTuple> switchPorts)
