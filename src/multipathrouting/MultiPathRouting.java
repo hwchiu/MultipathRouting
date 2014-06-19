@@ -280,6 +280,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     public void modifyLinkCost(Long srcDpid,Long dstDpid,short cost){
         updateLinkCost(srcDpid,dstDpid,cost);
         updateLinkCost(dstDpid,srcDpid,cost);
+        clearRoutingCache();
     }
 
 
