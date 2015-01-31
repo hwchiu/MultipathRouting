@@ -1,31 +1,34 @@
 package net.floodlightcontroller.multipathrouting;
 
-import org.openflow.util.HexString;
+import org.projectfloodlight.openflow.util.HexString;
+
+import org.projectfloodlight.openflow.types.DatapathId;
+
 public class NodeCost implements Comparable<NodeCost> {
     private final String nodeStr;
-    private final Long node;
+    private final DatapathId node;
     private final int cost;
 
     public String getDpidStr() {
         return nodeStr;
     }
-    public Long getDpid(){
+    public DatapathId getDpid(){
         return node;
     }
     public int getCost() {
         return cost;
     }
 
-    public NodeCost(Long node, int cost) {
+    public NodeCost(DatapathId node, int cost) {
         this.node = node;
-        this.nodeStr = HexString.toHexString(node);
+        this.nodeStr = HexString.toHexString(node.getLong());
         this.cost = cost;
     }
 
     @Override
     public int compareTo(NodeCost o) {
         if (o.cost == this.cost) {
-            return (int)(this.node - o.node);
+            return (int)(this.node.getLong() - o.node.getLong());
         }
         return this.cost - o.cost;
     }

@@ -1,15 +1,18 @@
 package net.floodlightcontroller.multipathrouting;
 
+import org.projectfloodlight.openflow.util.HexString;
 
-import org.openflow.util.HexString;
+import org.projectfloodlight.openflow.types.DatapathId;
+import org.projectfloodlight.openflow.types.OFPort;
+
 public class LinkWithCost{
-    protected long src;
-    protected short srcPort;
-    protected long dst;
-    protected short dstPort;
+	protected DatapathId src;
+    protected OFPort srcPort;
+	protected DatapathId dst;
+    protected OFPort dstPort;
     protected int cost;
 
-    public LinkWithCost(long srcDpid,short srcPort,long dstDpid,short dstPort,int cost){
+    public LinkWithCost(DatapathId srcDpid, OFPort srcPort, DatapathId dstDpid, OFPort dstPort,int cost){
         this.src = srcDpid;
         this.srcPort = srcPort;
         this.dst = dstDpid;
@@ -17,17 +20,17 @@ public class LinkWithCost{
         this.cost = cost;
     }
     
-    public long getSrcDpid(){
+    public DatapathId getSrcDpid(){
         return src;
     }
 
-    public long getDstDpid(){
+    public DatapathId getDstDpid(){
         return dst;
     }
-    public short getSrcPort(){
+    public OFPort getSrcPort(){
         return srcPort;
     }
-    public short getDstPort(){
+    public OFPort getDstPort(){
         return dstPort;
     }
     public int getCost(){
@@ -38,12 +41,12 @@ public class LinkWithCost{
         this.cost = cost;
     }
     public String toString() {
-        return "LinkWithCost [src=" + HexString.toHexString(this.src) 
+        return "LinkWithCost [src=" + HexString.toHexString(this.src.getLong()) 
                 + " outPort="
-                + (srcPort & 0xffff)
-                + ", dst=" + HexString.toHexString(this.dst)
+                + (srcPort.getPortNumber() & 0xffff)
+                + ", dst=" + HexString.toHexString(this.dst.getLong())
                 + ", inPort="
-                + (dstPort & 0xffff)
+                + (dstPort.getPortNumber() & 0xffff)
                 + ", cost ="
                 + cost
                 + "]";
@@ -52,10 +55,10 @@ public class LinkWithCost{
     public int hashCode() {
         final int prime = 56;
         int result = 1;
-        result = prime * result + (int) (dst ^ (dst >>> 32));
-        result = prime * result + dstPort;
-        result = prime * result + (int) (src ^ (src >>> 32));
-        result = prime * result + srcPort;
+        result = prime * result + (int) (dst.getLong() ^ (dst.getLong() >>> 32));
+        result = prime * result + dstPort.getPortNumber();
+        result = prime * result + (int) (src.getLong() ^ (src.getLong() >>> 32));
+        result = prime * result + srcPort.getPortNumber();
         result = prime * result + cost;
         return result;
     }

@@ -5,7 +5,10 @@ import java.util.Set;
 import net.floodlightcontroller.routing.Route;
 import net.floodlightcontroller.core.module.IFloodlightService;
 
+import org.projectfloodlight.openflow.types.DatapathId;
+import org.projectfloodlight.openflow.types.OFPort;
+
 public interface IMultiPathRoutingService extends IFloodlightService  {
-    public void modifyLinkCost(Long srcDpid,Long dstDpid,short cost);
-    public Route getRoute(long srcDpid,short srcPort,long dstDpid,short dstPort);
+    public void modifyLinkCost(DatapathId srcDpid,DatapathId dstDpid,short cost);
+    public Route getRoute(DatapathId srcDpid,OFPort srcPort,DatapathId dstDpid,OFPort dstPort);
 }

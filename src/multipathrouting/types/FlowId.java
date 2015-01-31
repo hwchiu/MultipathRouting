@@ -1,14 +1,17 @@
 package net.floodlightcontroller.multipathrouting;
 
-import org.openflow.util.HexString;
+import org.projectfloodlight.openflow.util.HexString;
+
+import org.projectfloodlight.openflow.types.DatapathId;
+import org.projectfloodlight.openflow.types.OFPort;
 
 public class FlowId implements Cloneable, Comparable<FlowId> {
-    protected Long src;
-    protected Long dst;
-    protected short srcPort;
-    protected short dstPort;
+    protected DatapathId src;
+    protected DatapathId dst;
+    protected OFPort srcPort;
+    protected OFPort dstPort;
 
-    public FlowId(Long src, short srcPort,Long dst,short dstPort) {
+    public FlowId(DatapathId src, OFPort srcPort,DatapathId dst,OFPort dstPort) {
 
         super();
         this.src = src;
@@ -17,32 +20,32 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
         this.dstPort = dstPort;
     }
 
-    public Long getSrc() {
+    public DatapathId getSrc() {
         return src;
     }
 
-    public void setSrc(Long src) {
+    public void setSrc(DatapathId src) {
         this.src = src;
     }
 
-    public Long getDst() {
+    public DatapathId getDst() {
         return dst;
     }
 
-    public void setDst(Long dst) {
+    public void setDst(DatapathId dst) {
         this.dst = dst;
     }
 
-    public short getSrcPort(){
+    public OFPort getSrcPort(){
         return srcPort;
     }
-    public void setSrcPort(short port){
+    public void setSrcPort(OFPort port){
         this.srcPort = port;
     }
-    public short getDstPort(){
+    public OFPort getDstPort(){
         return dstPort;
     }
-    public void setDstPort(short port){
+    public void setDstPort(OFPort port){
         this.dstPort = port;
     }
 
@@ -52,8 +55,8 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
         Long result = new Long(1);
         result = prime * result + ((dst == null) ? 0 : dst.hashCode());
         result = prime * result + ((src == null) ? 0 : src.hashCode());
-        result = prime * result + srcPort;
-        result = prime * result + dstPort;
+        result = prime * result + srcPort.getPortNumber();
+        result = prime * result + dstPort.getPortNumber();
         return result.hashCode(); 
     }
 
@@ -85,8 +88,8 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
 
     @Override
     public String toString() {
-        return "FlowId [src=" + HexString.toHexString(this.src) + " , port = "+Short.toString(srcPort)+" dst="
-                + HexString.toHexString(this.dst) + " , port = "+Short.toString(dstPort)+" ]";
+        return "FlowId [src=" + HexString.toHexString(this.src.getLong()) + " , port = "+Integer.toString(srcPort.getPortNumber())+" dst="
+                + HexString.toHexString(this.dst.getLong()) + " , port = "+Integer.toString(dstPort.getPortNumber())+" ]";
     }
 
     @Override
@@ -103,7 +106,7 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
         if (result != 0)
             return result;
         if ( srcPort == o.getSrcPort())
-            return dstPort - o.getDstPort();
-        return srcPort - o.getSrcPort();
+            return dstPort.getPortNumber() - o.getDstPort().getPortNumber();
+        return srcPort.getPortNumber() - o.getSrcPort().getPortNumber();
     }
 }
