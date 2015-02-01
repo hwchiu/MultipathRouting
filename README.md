@@ -1,14 +1,12 @@
 Introduction
-===========
-MultiPathRouting module is a [Floodlight](https://github.com/floodlight/floodlight) Module, using the dijkstra algorithm to find multiple shortest path over a network.  
-It also modify the original forwarding modules and make it use the MultiPathRouting to forward packet.  
-The cost of each link is 1 by default and you can use the IMultiPathRoutingService API to modify the link cost dynamically.  
-
+============
+MultiPathRouting module is a [Floodlight](https://github.com/floodlight/floodlight) Module, using the dijkstra algorithm to find multiple shortest path over a network.
+It also modify the original forwarding modules and make it use the MultiPathRouting to forward packet.
+The cost of each link is 1 by default and you can use the IMultiPathRoutingService API to modify the link cost dynamically.
 
 Implementation
 ==============
 This project collect the link information whenever the link's status has changed and use the [guava cache](https://code.google.com/p/guava-libraries/wiki/CachesExplained) to cache.
-
 
 Dispatch
 =======
@@ -21,14 +19,14 @@ Installation and configuration
 3. Append the `net.floodlightcontroller.multipathrouting.MultiPathRouting` into `src/main/resources/META-INF/services /net.floodlightcontroller.core.module.IFloodlightModule`
 4. Modfiy the floodlight config file, default is `src/main/resources/floodlightdefault.properties`
 	* Append `net.floodlightcontroller.multipathrouting.MultiPathRouting` to the option `floodlight.modules`
-5. Rebuild and restart Floodlight controller  
+5. Rebuild and restart Floodlight controller
 
 Service
 ======
-This module provides a floodlight service interface which offers two functions now.   
-- modifyLinkCost(Long srcDpid,Long dstDpid,short cost);    
+This module provides a floodlight service interface which offers two functions now.
+- modifyLinkCost(Long srcDpid,Long dstDpid,short cost);
 You can call this function to modify the cost of the link between two switches.
-- getRoute(long srcDpid,short srcPort,long dstDpid,short dstPort);  
+- getRoute(long srcDpid,short srcPort,long dstDpid,short dstPort);
 You can caa this function to get one of the shortest path and it depends on the dispatch algorithm.
 
 
@@ -39,5 +37,7 @@ This module has been tested with Mininet, you can find the testing topology on t
 Todo
 ====
 - Adding Restful API
-- Write Testing Code
-    
+
+Contact
+=======
+Hung-Wei Chiu  hwchiu@cs.nctu.edu.tw
