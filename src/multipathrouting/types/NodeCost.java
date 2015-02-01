@@ -12,7 +12,7 @@ public class NodeCost implements Comparable<NodeCost> {
     public String getDpidStr() {
         return nodeStr;
     }
-    public DatapathId getDpid(){
+    public DatapathId getDpid() {
         return node;
     }
     public int getCost() {

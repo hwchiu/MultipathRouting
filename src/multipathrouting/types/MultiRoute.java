@@ -9,24 +9,24 @@ public class MultiRoute {
     protected int routeSize;
     protected ArrayList<Route> routes;
 
-    public MultiRoute(){
+    public MultiRoute() {
         routeCount = 0;
         routeSize = 0;
         routes = new ArrayList<Route>();
     }
     
-    public Route getRoute(){
+    public Route getRoute() {
         routeCount = (routeCount+1)%routeSize;
         return routes.get(routeCount);
     }
 
-    public int getRouteCount(){
+    public int getRouteCount() {
         return routeCount;
     }
-    public int getRouteSize(){
+    public int getRouteSize() {
         return routeSize;    
     }
-    public void addRoute(Route route){
+    public void addRoute(Route route) {
         routeSize++;
         routes.add(route);
     }

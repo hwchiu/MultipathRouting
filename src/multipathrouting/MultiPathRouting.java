@@ -48,7 +48,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
 
     protected final int ROUTE_LIMITATION = 10;
     protected HashMap<DatapathId, HashSet<LinkWithCost>> dpidLinks;
-    protected int pathCount = 0;    
+    protected int pathCount = 0;
 
     protected class FlowCacheLoader extends CacheLoader<FlowId,Route> {
         MultiPathRouting mpr;
@@ -64,7 +64,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
 
     private final FlowCacheLoader flowCacheLoader = new FlowCacheLoader(this);
     protected LoadingCache<FlowId,Route> flowcache;
-    
+
     protected class PathCacheLoader extends CacheLoader<RouteId,MultiRoute> {
         MultiPathRouting mpr;
         PathCacheLoader(MultiPathRouting mpr) {
@@ -78,60 +78,58 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     }
     private final PathCacheLoader pathCacheLoader = new PathCacheLoader(this);
     protected LoadingCache<RouteId,MultiRoute> pathcache;
-    
-    
+
     //
     //
     //ITopologyListener
     //
     //
     @Override
-    public void topologyChanged(List<LDUpdate> linkUpdates){
-        for (LDUpdate update : linkUpdates){
+    public void topologyChanged(List<LDUpdate> linkUpdates) {
+        for (LDUpdate update : linkUpdates) {
             if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_REMOVED) || update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_UPDATED)) {
                 LinkWithCost srcLink = new LinkWithCost(update.getSrc(), update.getSrcPort(), update.getDst(), update.getDstPort(),1);
                 LinkWithCost dstLink = srcLink.getInverse();
-                if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_REMOVED)){
+
+                if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_REMOVED)) {
                     removeLink(srcLink);
                     removeLink(dstLink);
                     clearRoutingCache();
-                }
-                else if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_UPDATED)){
+                } else if (update.getOperation().equals(ILinkDiscovery.UpdateOperation.LINK_UPDATED)) {
                     addLink(srcLink);
                     addLink(dstLink);
                 }
             }
-            
-        } 
+        }
 
     }
-    public void clearRoutingCache(){
+    public void clearRoutingCache() {
          flowcache.invalidateAll();
          pathcache.invalidateAll();
     }
-    public void removeLink(LinkWithCost link){
+    public void removeLink(LinkWithCost link) {
         DatapathId dpid = link.getSrcDpid();
 
         if (null == dpidLinks.get(dpid)) {
             return;
         }
-        
+
 		dpidLinks.get(dpid).remove(link);
-        if(0 == dpidLinks.get(dpid).size())
+        if (0 == dpidLinks.get(dpid).size())
        		dpidLinks.remove(dpid);
     }
-    public void addLink(LinkWithCost link){    
+    public void addLink(LinkWithCost link) {
         DatapathId dpid = link.getSrcDpid();
 
         if (null == dpidLinks.get(dpid)) {
             HashSet<LinkWithCost> links = new HashSet<LinkWithCost>();
             links.add(link);
             dpidLinks.put(dpid,links);
-        }else {
+        } else {
             dpidLinks.get(dpid).add(link);
         }
     }
-    public Route buildFlowRoute(FlowId fid){
+    public Route buildFlowRoute(FlowId fid) {
         DatapathId srcDpid = fid.getSrc();
         DatapathId dstDpid = fid.getDst();
         OFPort srcPort = fid.getSrcPort();
@@ -141,16 +139,19 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         NodePortTuple npt;
         MultiRoute routes = null;
         Route result = null;
-        try{
+        try {
             routes = pathcache.get(new RouteId(srcDpid,dstDpid));
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("error {}",e.toString());
         }
-        if( 0 == routes.getRouteSize())
+
+        if (0 == routes.getRouteSize()) {
             result = null;
-        else
+		}
+        else {
             result = routes.getRoute();
-        
+		}
+
         if (result != null) {
             nptList= new ArrayList<NodePortTuple>(result.getPath());
         } else {
@@ -158,50 +159,63 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         }
 
         npt = new NodePortTuple(srcDpid, srcPort);
-        nptList.add(0, npt); 
+        nptList.add(0, npt);
         npt = new NodePortTuple(dstDpid, dstPort);
-        nptList.add(npt); 
+        nptList.add(npt);
 
         result = new Route(new RouteId(srcDpid,dstDpid), nptList);
         return result;
     }
 
-    public MultiRoute buildMultiRoute(RouteId rid){
+    public MultiRoute buildMultiRoute(RouteId rid) {
         return computeMultiPath(rid);
     }
 
-    public MultiRoute computeMultiPath(RouteId rid){
+    public MultiRoute computeMultiPath(RouteId rid) {
         DatapathId srcDpid = rid.getSrc();
         DatapathId dstDpid = rid.getDst();
         MultiRoute routes = new MultiRoute();
-        if( srcDpid == dstDpid)
+
+        if (srcDpid == dstDpid) {
             return routes;
-        if( null == dpidLinks.get(srcDpid) || null == dpidLinks.get(dstDpid))
+		}
+
+        if (null == dpidLinks.get(srcDpid) || null == dpidLinks.get(dstDpid)) {
             return routes;
+		}
+
         HashMap<DatapathId, HashSet<LinkWithCost>> previous = new HashMap<DatapathId, HashSet<LinkWithCost>>();
         HashMap<DatapathId, HashSet<LinkWithCost>> links = dpidLinks;
         HashMap<DatapathId, Integer> costs = new HashMap<DatapathId, Integer>();
-        for(DatapathId dpid : links.keySet()){
+
+        for(DatapathId dpid : links.keySet()) {
             costs.put(dpid,Integer.MAX_VALUE);
             previous.put(dpid,new HashSet<LinkWithCost>());
         }
+
         PriorityQueue<NodeCost> nodeq = new PriorityQueue<NodeCost>();
         HashSet<DatapathId> seen = new HashSet<DatapathId>();
         nodeq.add(new NodeCost(srcDpid,0));
         NodeCost node;
-        while( null != nodeq.peek()){
+
+        while (null != nodeq.peek()) {
             node = nodeq.poll();
-            if(node.getDpid() ==  dstDpid)
+            if (node.getDpid() ==  dstDpid) {
                 break;
+			}
+
             int cost = node.getCost();
             seen.add(node.getDpid());
+
             for (LinkWithCost link: links.get(node.getDpid())) {
                 DatapathId dst = link.getDstDpid();
                 int totalCost = link.getCost() + cost;
-                if( true == seen.contains(dst))
-                    continue;
 
-                if( totalCost < costs.get(dst) ){
+                if (true == seen.contains(dst)) {
+                    continue;
+				}
+
+                if (totalCost < costs.get(dst)) {
                     costs.put(dst,totalCost);
                     previous.get(dst).clear();
                     previous.get(dst).add(link.getInverse());
@@ -209,30 +223,33 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
                     NodeCost ndTemp = new NodeCost(dst,totalCost);
                     nodeq.remove(ndTemp);
                     nodeq.add(ndTemp);
-                }
-                else if( totalCost == costs.get(dst) ){
+                } else if (totalCost == costs.get(dst) ) {
                     //multiple path
                     previous.get(dst).add(link.getInverse());
                 }
             }
 
         }
+
         LinkedList<NodePortTuple> switchPorts = new LinkedList<NodePortTuple>();
         pathCount = 0;
         generateMultiPath(routes,srcDpid,dstDpid,dstDpid,previous,switchPorts);
         return routes;
     }
     public void generateMultiPath(MultiRoute routes, DatapathId srcDpid, DatapathId dstDpid, DatapathId current, HashMap<DatapathId, HashSet<LinkWithCost>> previous,LinkedList<NodePortTuple> switchPorts)
-    {   if (pathCount >=ROUTE_LIMITATION)
-            return ; 
-        if( current == srcDpid){
+    {   if (pathCount >=ROUTE_LIMITATION) {
+            return ;
+		}
+
+        if (current == srcDpid) {
             pathCount++;
             Route result = new Route(new RouteId(srcDpid,dstDpid), new LinkedList<NodePortTuple>(switchPorts));
             routes.addRoute(result);
             return ;
         }
+
         HashSet<LinkWithCost> links = previous.get(current);
-        for(LinkWithCost link: links){
+        for(LinkWithCost link: links) {
             NodePortTuple npt = new NodePortTuple(link.getDstDpid(), link.getDstPort());
             NodePortTuple npt2 = new NodePortTuple(link.getSrcDpid(), link.getSrcPort());
             switchPorts.addFirst(npt2);
@@ -245,10 +262,10 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         return ;
     }
 
-    private void updateLinkCost(DatapathId srcDpid,DatapathId dstDpid,int cost){
-        if( null != dpidLinks.get(srcDpid)){
-            for(LinkWithCost link: dpidLinks.get(srcDpid)){
-                if(link.getSrcDpid() == srcDpid && link.getDstDpid() == dstDpid){
+    private void updateLinkCost(DatapathId srcDpid,DatapathId dstDpid,int cost) {
+        if (null != dpidLinks.get(srcDpid)) {
+            for(LinkWithCost link: dpidLinks.get(srcDpid)) {
+                if (link.getSrcDpid() == srcDpid && link.getDstDpid() == dstDpid) {
                     link.setCost(cost);
                     return;
                 }
@@ -261,27 +278,30 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     //
     //
     @Override
-    public Route getRoute(DatapathId srcDpid,OFPort srcPort,DatapathId dstDpid,OFPort dstPort){
+    public Route getRoute(DatapathId srcDpid,OFPort srcPort,DatapathId dstDpid,OFPort dstPort) {
         // Return null the route source and desitnation are the
         // same switchports.
-        if (srcDpid == dstDpid && srcPort == dstPort)
+        if (srcDpid == dstDpid && srcPort == dstPort) {
             return null;
+		}
 
         FlowId id = new FlowId(srcDpid,srcPort,dstDpid,dstPort);
         Route result = null;
-        try{
+
+        try {
             result = flowcache.get(id);
-        }catch (Exception e){
+        } catch (Exception e) {
             logger.error("error {}",e.toString());
         }
-        
-        if (result == null && srcDpid != dstDpid) return null;
+
+        if (result == null && srcDpid != dstDpid) {
+			return null;
+		}
         return result;
-        
     }
 
     @Override
-    public void modifyLinkCost(DatapathId srcDpid,DatapathId dstDpid,short cost){
+    public void modifyLinkCost(DatapathId srcDpid,DatapathId dstDpid,short cost) {
         updateLinkCost(srcDpid,dstDpid,cost);
         updateLinkCost(dstDpid,srcDpid,cost);
         clearRoutingCache();
@@ -293,8 +313,6 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
     //IFloodlightModule
     //
     //
-
-
     @Override
     public Collection<Class<? extends IFloodlightService>> getModuleServices() {
         Collection<Class<? extends IFloodlightService>> l =
@@ -355,5 +373,4 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         topologyService.addListener(this);
         //restApi.addRestletRoutable(new MultiPathRoutingWebRoutable());
     }
-
 }

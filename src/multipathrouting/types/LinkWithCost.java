@@ -12,7 +12,7 @@ public class LinkWithCost{
     protected OFPort dstPort;
     protected int cost;
 
-    public LinkWithCost(DatapathId srcDpid, OFPort srcPort, DatapathId dstDpid, OFPort dstPort,int cost){
+    public LinkWithCost(DatapathId srcDpid, OFPort srcPort, DatapathId dstDpid, OFPort dstPort,int cost) {
         this.src = srcDpid;
         this.srcPort = srcPort;
         this.dst = dstDpid;
@@ -20,24 +20,24 @@ public class LinkWithCost{
         this.cost = cost;
     }
     
-    public DatapathId getSrcDpid(){
+    public DatapathId getSrcDpid() {
         return src;
     }
 
-    public DatapathId getDstDpid(){
+    public DatapathId getDstDpid() {
         return dst;
     }
-    public OFPort getSrcPort(){
+    public OFPort getSrcPort() {
         return srcPort;
     }
-    public OFPort getDstPort(){
+    public OFPort getDstPort() {
         return dstPort;
     }
-    public int getCost(){
+    public int getCost() {
         return cost;
     }
 
-    public void setCost(int cost){
+    public void setCost(int cost) {
         this.cost = cost;
     }
     public String toString() {
@@ -86,7 +86,7 @@ public class LinkWithCost{
     }
 
 
-    public LinkWithCost getInverse(){
+    public LinkWithCost getInverse() {
         return new LinkWithCost(dst,dstPort,src,srcPort,cost);
     }
 

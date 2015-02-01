@@ -12,7 +12,6 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
     protected OFPort dstPort;
 
     public FlowId(DatapathId src, OFPort srcPort,DatapathId dst,OFPort dstPort) {
-
         super();
         this.src = src;
         this.dst = dst;
@@ -36,16 +35,19 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
         this.dst = dst;
     }
 
-    public OFPort getSrcPort(){
+    public OFPort getSrcPort() {
         return srcPort;
     }
-    public void setSrcPort(OFPort port){
+
+    public void setSrcPort(OFPort port) {
         this.srcPort = port;
     }
-    public OFPort getDstPort(){
+
+    public OFPort getDstPort() {
         return dstPort;
     }
-    public void setDstPort(OFPort port){
+
+    public void setDstPort(OFPort port) {
         this.dstPort = port;
     }
 
@@ -68,17 +70,20 @@ public class FlowId implements Cloneable, Comparable<FlowId> {
             return false;
         if (getClass() != obj.getClass())
             return false;
+
         FlowId other = (FlowId) obj;
         if (dst == null) {
             if (other.dst != null)
                 return false;
         } else if (!dst.equals(other.dst))
             return false;
+
         if (src == null) {
             if (other.src != null)
                 return false;
         } else if (!src.equals(other.src))
             return false;
+
         if (srcPort != other.srcPort)
             return false;
         if (dstPort != other.dstPort)
