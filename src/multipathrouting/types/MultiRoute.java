@@ -14,7 +14,12 @@ public class MultiRoute {
         routeSize = 0;
         routes = new ArrayList<Route>();
     }
-    
+
+
+	public ArrayList<Route> getRoutes() {
+		return routes;
+	}
+
     public Route getRoute() {
         routeCount = (routeCount+1)%routeSize;
         return routes.get(routeCount);
@@ -23,9 +28,11 @@ public class MultiRoute {
     public int getRouteCount() {
         return routeCount;
     }
+
     public int getRouteSize() {
-        return routeSize;    
+        return routeSize;
     }
+
     public void addRoute(Route route) {
         routeSize++;
         routes.add(route);

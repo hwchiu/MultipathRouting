@@ -139,6 +139,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         NodePortTuple npt;
         MultiRoute routes = null;
         Route result = null;
+
         try {
             routes = pathcache.get(new RouteId(srcDpid,dstDpid));
         } catch (Exception e) {
@@ -147,8 +148,7 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
 
         if (0 == routes.getRouteSize()) {
             result = null;
-		}
-        else {
+		} else {
             result = routes.getRoute();
 		}
 
@@ -297,8 +297,28 @@ public class MultiPathRouting implements IFloodlightModule ,ITopologyListener, I
         if (result == null && srcDpid != dstDpid) {
 			return null;
 		}
+
         return result;
     }
+
+	@Override
+	public MultiRoute getMultiRoute(DatapathId srcDpid, DatapathId dstDpid) {
+
+		if (srcDpid == dstDpid) {
+			return null;
+		}
+
+		RouteId rId = new RouteId(srcDpid, dstDpid);
+		MultiRoute result = null;
+
+		try {
+			result = pathcache.get(rId);
+		} catch (Exception e) {
+			logger.error("error {}", e.toString());
+		}
+
+		return result;
+	}
 
     @Override
     public void modifyLinkCost(DatapathId srcDpid,DatapathId dstDpid,short cost) {
